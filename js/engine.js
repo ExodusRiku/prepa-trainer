@@ -4,6 +4,14 @@ import { subAccuracy, adaptLevel, setAdaptLevel } from './storage.js';
 
 let counter = 0;
 
+// Affichage propre : supprime le bruit flottant (99.99999999999999 → 100) et met la virgule décimale française
+export function cleanText(t) {
+  if (typeof t !== 'string') return t;
+  return t
+    .replace(/\d+\.\d*?(?:0{6,}|9{6,})\d*/g, (m) => String(Number(Number(m).toPrecision(10))))
+    .replace(/(\d)\.(\d)/g, '$1,$2');
+}
+
 // Explication toujours détaillée : explication propre à la question + rappel de méthode du sous-thème
 export function buildExpl(q, g) {
   let e = (q.expl || '').trim();
@@ -13,7 +21,7 @@ export function buildExpl(q, g) {
   }
   const tip = g.tip || TIPS[g.sub];
   if (tip && !e.includes(tip)) e += `\n\nMéthode à retenir : ${tip}`;
-  return e;
+  return cleanText(e);
 }
 
 export class Session {
@@ -47,7 +55,7 @@ export class Session {
       let out = g.gen(r);
       const arr = Array.isArray(out) ? out : [out];
       const ctx = Array.isArray(out) ? arr.ctx || arr[0].ctx : null;
-      arr.forEach((q) => { q.expl = buildExpl(q, g); });
+      arr.forEach((q) => { q.expl = buildExpl(q, g); q.q = cleanText(q.q); if (q.ctx) q.ctx = cleanText(q.ctx); if (q.consts) q.consts = cleanText(q.consts); if (q.kind === 'mcq' && !q.htmlChoices) q.choices = q.choices.map(cleanText); if (q.why) q.why = q.why.map(cleanText); });
       arr.forEach((q, i) => { q.sub = g.sub; q.lvl = g.lvl; q.gid = g.id; q.kind ||= 'num'; q.mental = !!g.mental; q.part = arr.length > 1 ? `${i + 1}/${arr.length}` : null; });
       this.queue.push(...arr);
     }
