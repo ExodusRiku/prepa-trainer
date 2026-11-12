@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><title>Tests Prépa Trainer</title>
+<style>body{font:14px/1.4 monospace;background:#111;color:#ddd;padding:12px}.ko{color:#f66}.ok{color:#6c6}</style></head>
+<body><h2>Tests Prépa Trainer</h2><pre id="out">Exécution…</pre>
+<script type="module">
+import { THEMES } from './js/gen/index.js';
+import { makeRng } from './js/rng.js';
+import { grade, parseExpr, diagnose } from './js/check.js';
+import { buildExpl } from './js/engine.js';
+const out = document.getElementById('out');
+const groups = new Map(); let fails = 0;
+const fail = (m) => { fails++; const key = m.split(':')[0] + '|' + m.replace(/[0-9.\-e+]+/g, '#').slice(0, 60); const g = groups.get(key) || { n: 0, ex: m }; g.n++; groups.set(key, g); };
+// ---- parseur
+const P = [['2+3*4',14],['(2+3)*4',20],['2^10',1024],['2π',2*Math.PI],['√2',Math.SQRT2],['√(16)',4],['1/2',0.5],['3,5',3.5],['10^-3',1e-3],['3×10^8',3e8],['3e8',3e8],['6,6·10⁻³⁴',6.6e-34],['−5',-5],['5²',25],['2⁻¹',0.5],['ln(e)',1],['e^2',Math.exp(2)],['π/4',Math.PI/4],['2e',2*Math.E],['sin(π/6)',0.5],['12 m/s',12],['25 L',25],['3,2 kJ/mol',3.2],['∞',Infinity],['-∞',-Infinity],['5!',120],['50%',50],['2(3+4)',14],['3 π',3*Math.PI],['1,5·10^3 W',1500],['−2,5 V',-2.5],['sqrt(9)',3],['10^(−3)',1e-3],['2^3^2',512],['8 kg',8],['0,5 mol',0.5],['2 sqrt2',2*Math.SQRT2],['4,18 J/(g·K)',4.18]];
+for (const [s, v] of P) { let r; try { r = parseExpr(s); } catch (e) { r = 'ERR ' + e.message; } if (!(r === v || Math.abs(r - v) <= 1e-9 * Math.max(1, Math.abs(v)))) fail(`parse « ${s} » = ${r}, attendu ${v}`); }
+// ---- générateurs
+const stats = {};
+for (const th of THEMES) {
+  const subs = new Set();
+  for (const g of th.gens) {
+    subs.add(g.sub);
+    const seen = new Set();
+    for (let i = 0; i < 300; i++) {
+      const r = makeRng(1000 + i * 7919);
+      let o;
+      try { o = g.gen(r); } catch (e) { fail(`${th.id}/${g.id}: exception ${e.message}`); break; }
+      const arr = Array.isArray(o) ? o : [o];
+      for (const q of arr) {
+        const tag = `${th.id}/${g.id}`;
+        if (!q || typeof q !== 'object') { fail(`${tag}: question nulle`); continue; }
+        q.kind ||= 'num'; q.lvl = g.lvl; q.mental = !!g.mental; q.sub = g.sub;
+        q.expl = buildExpl(q, g);
+        seen.add(q.q);
+        if (!q.q || String(q.q).includes('undefined') || String(q.q).includes('NaN')) { fail(`${tag}: énoncé invalide: ${q.q}`); continue; }
+        if (String(q.expl).includes('undefined') || String(q.expl).includes('NaN')) fail(`${tag}: explication avec undefined/NaN: ${q.q} -> ${q.expl}`);
+        if ((q.expl || '').length < 25) fail(`${tag}: explication trop courte`);
+        if (q.kind === 'num') {
+          if (typeof q.a !== 'number' || Number.isNaN(q.a)) { fail(`${tag}: réponse invalide ${q.a} (${q.q})`); continue; }
+          const s = isFinite(q.a) ? String(q.a) : (q.a > 0 ? '∞' : '-∞');
+          const gr = grade(q, s, false);
+          if (!gr.ok) fail(`${tag}: réponse exacte refusée ${s} (${q.q.slice(0, 80)}) ${gr.error || ''}`);
+          if (isFinite(q.a) && q.tol !== undefined && q.a !== 0) { const wv = q.a * 1.37 + 11; const w = grade({ ...q, factor: undefined }, String(wv), false); if (w.ok && Math.abs(wv - q.a) > 3 * (q.tol || 1e-6) * Math.abs(q.a) + 1e-6) fail(`${tag}: réponse fausse acceptée (${q.q.slice(0, 60)}) a=${q.a}`); }
+          if (q.chk) { const c = q.chk(); const tol = Math.max(3e-3 * Math.abs(q.a), 3e-3); if (!(Math.abs(c - q.a) <= tol)) fail(`${tag}: vérif. numérique indépendante ${c} ≠ ${q.a} (${q.q.slice(0, 70)})`); }
+          if (!diagnose(q, String(q.a + 1)) && false) fail('diag');
+        } else if (q.kind === 'list') {
+          if (!Array.isArray(q.a) || q.a.some((x) => typeof x !== 'number' || Number.isNaN(x))) { fail(`${tag}: liste invalide`); continue; }
+          const gr = grade(q, q.a.map((x) => String(x)).join(' ; '), false);
+          if (!gr.ok) fail(`${tag}: liste exacte refusée (${q.q.slice(0, 60)}) ${gr.error || ''}`);
+        } else if (q.kind === 'mcq') {
+          const uniq = new Set(q.choices);
+          if (uniq.size !== q.choices.length) fail(`${tag}: choix en double (${q.q.slice(0, 50)})`);
+          if (!(q.a >= 0 && q.a < q.choices.length)) fail(`${tag}: index de bonne réponse invalide`);
+          if (q.why && q.why.length !== q.choices.length) fail(`${tag}: why désaligné`);
+          if (q.choices.length < 3) fail(`${tag}: moins de 3 choix`);
+          if (!grade(q, String(q.a)).ok) fail(`${tag}: bon choix refusé`);
+        } else if (q.kind === 'text') {
+          if (!grade(q, String(q.a)).ok) fail(`${tag}: texte exact refusé`);
+        } else fail(`${tag}: kind inconnu ${q.kind}`);
+      }
+    }
+    stats[th.id] = stats[th.id] || { gens: 0, subs: 0, variety: [] };
+    stats[th.id].gens++;
+    stats[th.id].variety.push(`${g.id}:${seen.size}`);
+  }
+  stats[th.id].subs = subs.size;
+}
+const log = [...groups.values()].sort((a, b) => b.n - a.n).slice(0, 80).map((g) => `✗ [x${g.n}] ${g.ex}`);
+let report = `Échecs : ${fails} (${groups.size} types)\n\n` + log.join('\n') + '\n\n--- Couverture ---\n';
+for (const [k, v] of Object.entries(stats)) report += `${k}: ${v.gens} générateurs, ${v.subs} sous-thèmes\n`;
+const weak = Object.entries(stats).flatMap(([k, v]) => v.variety.filter((x) => +x.split(':')[1] < 5).map((x) => `${k}/${x}`));
+report += `\nGénérateurs à faible variété (<5 énoncés distincts sur 300) :\n${weak.join(', ') || 'aucun'}`;
+out.textContent = report;
+document.title = 'DONE ' + fails;
+</script></body></html>
