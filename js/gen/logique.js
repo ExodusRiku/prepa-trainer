@@ -105,7 +105,7 @@ function knights(r, nP) {
 
 const DAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 
-export default [
+const BASE_L = [
   // ================= Matrices de motifs (SVG)
   G('mot1', 'Matrices de motifs', 1, (r) => patternQuestion(r, 1)),
   G('mot2', 'Matrices de motifs', 2, (r) => patternQuestion(r, 2)),
@@ -124,7 +124,7 @@ export default [
   G('s_inter', 'Suites numériques', 3, (r) => { const a = r.int(1, 9), d = r.int(2, 6), b = r.int(20, 40), e = r.int(-5, -2); const s = []; for (let i = 0; i < 4; i++) { s.push(a + i * d); s.push(b + i * e); } return N(`Quel nombre suit ?\n${fmtSeq(s.slice(0, 7))}`, s[7], `Deux suites entrelacées : rangs impairs ${s.filter((_, i) => i % 2 === 0).slice(0, 4).join(', ')} (pas +${d}) et rangs pairs ${s.filter((_, i) => i % 2).slice(0, 3).join(', ')}, … (pas ${e}). Le terme manquant est de rang pair : ${s[7]}.`); }),
   G('s_digit', 'Suites numériques', 4, (r) => { let x = r.int(1, 9); const s = [x]; for (let i = 0; i < 6; i++) { x += String(x).split('').reduce((a, c) => a + +c, 0); s.push(x); } return N(`Quel nombre suit ?\n${fmtSeq(s.slice(0, 6))}`, s[6], `Chaque terme = précédent + somme de ses chiffres : ${s[5]} + ${String(s[5]).split('').join('+')} = ${s[6]}.`); }),
   G('s_rec', 'Suites numériques', 4, (r) => { const k = r.pick([2, 3]), c = r.pick([1, -1, 2]); let x = r.int(1, 3); const s = [x]; for (let i = 0; i < 6; i++) { x = k * x + c; s.push(x); } return N(`Quel nombre suit ?\n${fmtSeq(s.slice(0, 6))}`, s[6], `Relation de récurrence u_(n+1) = ${k}·u_n ${c < 0 ? '−' : '+'} ${Math.abs(c)} : ${k}×${s[5]} ${c < 0 ? '−' : '+'} ${Math.abs(c)} = ${s[6]}.`); }),
-  G('s_fact', 'Suites numériques', 5, (r) => { const o = r.pick([['n!', (n) => fact(n)], ['n!+1', (n) => fact(n) + 1], ['n·2ⁿ', (n) => n * 2 ** n], ['n² + n!', (n) => n * n + fact(n)], ['C(n,2)', (n) => (n * (n - 1)) / 2]]); const s = seq(6, (i) => o[1](i + 2)); return N(`Quel nombre suit ?\n${fmtSeq(s)}`, o[1](8), `Terme général u_n = ${o[0]} avec n = 2, 3, … Pour n = 8 : ${o[1](8)}.`); }),
+  G('s_fact', 'Suites numériques', 5, (r) => { const o = r.pick([['n!', (n) => fact(n)], ['n! + 1', (n) => fact(n) + 1], ['n! − 1', (n) => fact(n) - 1], ['2·n!', (n) => 2 * fact(n)], ['n! + n', (n) => fact(n) + n]]); const s = seq(6, (i) => o[1](i + 2)); return N(`Quel nombre suit ?\n${fmtSeq(s)}`, o[1](8), `Terme général u_n = ${o[0]} avec n = 2, 3, … Pour n = 8 : ${o[1](8)}.`); }),
   G('s_ana', 'Suites numériques', 2, (r) => { const f = r.pick([['carré', (x) => x * x], ['cube', (x) => x ** 3], ['double + 1', (x) => 2 * x + 1], ['triple − 2', (x) => 3 * x - 2], ['x² + x', (x) => x * x + x]]); const a = r.int(2, 5), b = r.int(6, 9); return N(`${a} : ${f[1](a)} :: ${b} : ?`, f[1](b), `La règle est « ${f[0]} » : ${a} → ${f[1](a)}. Donc ${b} → ${f[1](b)}.`); }),
   G('s_grid', 'Suites numériques', 3, (r) => { const rule = r.pick([['la 3ᵉ colonne est la somme des deux premières', (a, b) => a + b], ['la 3ᵉ colonne est le produit des deux premières', (a, b) => a * b], ['la 3ᵉ colonne est la différence (1ʳᵉ − 2ᵉ)', (a, b) => a - b]]); const rows = [0, 1, 2].map(() => { const a = r.int(2, 9), b = r.int(1, 8); return [a, b, rule[1](a, b)]; }); return N(`Trouve le nombre manquant :\n${rows[0].join('   ')}\n${rows[1].join('   ')}\n${rows[2][0]}   ${rows[2][1]}   ?`, rows[2][2], `Sur chaque ligne ${rule[0]} : ${rows[0][0]}, ${rows[0][1]} → ${rows[0][2]}. Donc ${rows[2][0]}, ${rows[2][1]} → ${rows[2][2]}.`); }),
   G('s_pascal', 'Suites numériques', 3, (r) => { const n = r.int(4, 8), k = r.int(1, n - 1); return N(`Dans le triangle de Pascal (ligne 0 = « 1 »), quel est le nombre de la ligne ${n}, en position ${k} (en partant de 0) ?`, comb(n, k), `Chaque nombre est la somme des deux au-dessus ; c’est le coefficient binomial C(${n},${k}) = ${n}!/(${k}!×${n - k}!) = ${comb(n, k)}.`); }),
@@ -167,3 +167,60 @@ export default [
   G('xor', 'Binaire & bases', 3, (r) => { const a = r.int(5, 60), b = r.int(5, 60); const w = r.int(0, 2); const f = [['XOR (⊕)', (x, y) => x ^ y], ['ET bit à bit (&)', (x, y) => x & y], ['OU bit à bit (|)', (x, y) => x | y]][w]; return N(`Calcule ${a} ${f[0]} ${b} (en décimal).`, f[1](a, b), `${a} = ${a.toString(2).padStart(6, '0')}₂ ; ${b} = ${b.toString(2).padStart(6, '0')}₂ ; ${f[0]} bit à bit → ${f[1](a, b).toString(2).padStart(6, '0')}₂ = ${f[1](a, b)}.`); }),
   G('hexa', 'Binaire & bases', 3, (r) => { const n = r.int(16, 255); return N(`Quelle est la valeur décimale du nombre hexadécimal ${n.toString(16).toUpperCase()} ?`, n, `${n.toString(16).toUpperCase()}₁₆ = ${n.toString(16).split('').map((c, i, a) => `${parseInt(c, 16)}×16^${a.length - 1 - i}`).join(' + ')} = ${n}.`); }),
 ];
+
+
+// ------------------------------------------------ Bonne position des questions : réponse unique
+// Prédictions du terme suivant par chaque famille de règles simples qui colle à tous les termes affichés.
+function predictions(seq) {
+  const out = [];
+  const n = seq.length, last = seq[n - 1];
+  // 1) polynôme de degré <= 3 : différences constantes
+  let levels = [seq.slice()];
+  for (let k = 1; k <= 3; k++) {
+    const prev = levels[k - 1];
+    levels.push(prev.slice(1).map((x, i) => x - prev[i]));
+    const d = levels[k];
+    if (d.length >= 2 && d.every((x) => x === d[0])) {
+      let nxt = d[0];
+      for (let j = k - 1; j >= 0; j--) nxt = levels[j][levels[j].length - 1] + nxt;
+      out.push(nxt); break;
+    }
+  }
+  // 2) géométrique
+  if (seq.every((x) => x !== 0) && seq.slice(1).every((x, i) => x * seq[0] === seq[i] * seq[1])) { const v = (last * seq[1]) / seq[0]; if (Number.isInteger(v)) out.push(v); }
+  // 3) récurrence affine u(n+1) = a·u(n) + b
+  if (seq[1] !== seq[0]) { const a = (seq[2] - seq[1]) / (seq[1] - seq[0]); const b = seq[1] - a * seq[0]; if (seq.slice(1).every((x, i) => Math.abs(a * seq[i] + b - x) < 1e-9)) { const v = a * last + b; if (Math.abs(v - Math.round(v)) < 1e-9) out.push(Math.round(v)); } }
+  // 4) récurrence linéaire d’ordre 2 : u(n+2) = a·u(n+1) + b·u(n)
+  if (n >= 5) { const det = seq[1] * seq[1] - seq[0] * seq[2]; if (det !== 0) { const a = (seq[2] * seq[1] - seq[0] * seq[3]) / det, b = (seq[1] * seq[3] - seq[2] * seq[2]) / det; if (seq.slice(2).every((x, i) => Math.abs(a * seq[i + 1] + b * seq[i] - x) < 1e-9)) { const v = a * last + b * seq[n - 2]; if (Math.abs(v - Math.round(v)) < 1e-9) out.push(Math.round(v)); } } }
+  // 5) deux suites arithmétiques entrelacées
+  if (n >= 6) { const ev = seq.filter((_, i) => i % 2 === 0), od = seq.filter((_, i) => i % 2); const ar = (t) => t.length >= 3 && t.slice(1).every((x, i) => x - t[i] === t[1] - t[0]); if (ar(ev) && ar(od)) { const t = n % 2 === 0 ? ev : od; out.push(t[t.length - 1] + (t[1] - t[0])); } }
+  // 6) opérations alternées (+p puis ×m, ou ×m puis +p)
+  if (n >= 5) { for (const [addFirst] of [[true], [false]]) { const a0 = addFirst ? seq[1] - seq[0] : null; const p = addFirst ? seq[1] - seq[0] : seq[2] - seq[1]; const m = addFirst ? (seq[1] !== 0 ? seq[2] / seq[1] : NaN) : (seq[0] !== 0 ? seq[1] / seq[0] : NaN); if (!Number.isFinite(m) || !Number.isInteger(m)) continue; let ok = true; for (let i = 0; i < n - 1; i++) { const isAdd = addFirst ? i % 2 === 0 : i % 2 === 1; if ((isAdd ? seq[i] + p : seq[i] * m) !== seq[i + 1]) { ok = false; break; } } if (ok) { const i = n - 1; const isAdd = addFirst ? i % 2 === 0 : i % 2 === 1; out.push(isAdd ? last + p : last * m); } } }
+  return out;
+}
+const HINTS = { s_digit: 'Indice : chaque terme se calcule à partir du précédent et de ses chiffres.', s_fact: 'Indice : la formule fait intervenir une factorielle (n!).', s_prime: 'Indice : pense aux nombres premiers.' };
+const parseSeq = (q) => String(q).split('\n').slice(1).join(' ').replace('?', '').split(';').map((x) => x.trim()).filter(Boolean).map(Number);
+const wellPosed = (g) => ({
+  ...g,
+  gen: (r) => {
+    let last;
+    for (let i = 0; i < 40; i++) {
+      const q = g.gen(r); last = q;
+      const seq = parseSeq(q.q);
+      if (seq.length < 4 || seq.some(Number.isNaN)) return q;
+      const preds = [...new Set(predictions(seq))];
+      if (preds.length === 0) { // règle « exotique » : on donne un indice sur la famille
+        if (HINTS[g.id]) { q.q += `\n${HINTS[g.id]}`; return q; }
+        continue;
+      }
+      if (preds.length === 1 && preds[0] === q.a) return q;
+    }
+    return { q: 'Quel nombre suit ?\n2 ; 5 ; 8 ; 11 ; 14 ; ?', a: 17, tol: 0, expl: 'Suite arithmétique de raison 3 : 14 + 3 = 17.' };
+  },
+});
+const OVR = {
+  s_ana: (r) => { const rules = [['le carré', (x) => x * x, 'x²'], ['le double plus 1', (x) => 2 * x + 1, '2x + 1'], ['le triple moins 2', (x) => 3 * x - 2, '3x − 2'], ['x² + x', (x) => x * x + x, 'x² + x'], ['x² + 1', (x) => x * x + 1, 'x² + 1'], ['le nombre triangulaire x(x+1)/2', (x) => (x * (x + 1)) / 2, 'x(x+1)/2'], ['le quadruple moins 1', (x) => 4 * x - 1, '4x − 1'], ['x² − 1', (x) => x * x - 1, 'x² − 1']]; const f = r.pick(rules); const a = r.int(1, 4); const xs = [a, a + 1, a + 2, a + 3]; const b = a + 4 + r.int(0, 3); return N(`Trouve la règle puis complète :\n${xs.map((x) => `${x} → ${f[1](x)}`).join(' ; ')} ; ${b} → ?`, f[1](b), `Les quatre exemples suffisent à fixer la règle (une formule polynomiale de degré ≤ 2 est entièrement déterminée par 3 points ; le 4ᵉ la vérifie) : f(x) = ${f[2]}. Vérification : ${xs.map((x) => `f(${x}) = ${f[1](x)}`).join(', ')}. Donc f(${b}) = ${f[1](b)}.`); },
+  s_grid: (r) => { const rules = [['la 3ᵉ colonne est la somme des deux premières', (a, b) => a + b], ['la 3ᵉ colonne est le produit des deux premières', (a, b) => a * b], ['la 3ᵉ colonne est la différence (1ʳᵉ − 2ᵉ)', (a, b) => a - b], ['la 3ᵉ colonne est la différence (2ᵉ − 1ʳᵉ)', (a, b) => b - a]]; for (let t = 0; t < 200; t++) { const k = r.int(0, 3); const rows = [0, 1, 2].map(() => { const a = r.int(2, 9), b = r.int(1, 8); return [a, b, rules[k][1](a, b)]; }); const others = rules.filter((_, i) => i !== k); const unique = others.every((o) => rows.some((row) => o[1](row[0], row[1]) !== row[2])); if (!unique || new Set(rows.map((x) => x.join())).size < 3) continue; return N(`Trouve le nombre manquant :\n${rows[0].join('   ')}\n${rows[1].join('   ')}\n${rows[2][0]}   ${rows[2][1]}   ?`, rows[2][2], `Sur chaque ligne ${rules[k][0]} : ${rows[0][0]}, ${rows[0][1]} → ${rows[0][2]} ; ${rows[1][0]}, ${rows[1][1]} → ${rows[1][2]}. Les trois autres règles (somme, produit, différences) ne marchent pas sur toutes les lignes, donc celle-ci est la seule. Ligne 3 : ${rows[2][0]}, ${rows[2][1]} → ${rows[2][2]}.`); } return N('Trouve le nombre manquant :\n2   3   5\n4   1   5\n6   2   ?', 8, 'La 3ᵉ colonne est la somme des deux premières : 6 + 2 = 8.'); },
+  odd: (r) => { const fams = [['carrés parfaits', [4, 9, 16, 25, 36, 49, 64, 81], (x) => Number.isInteger(Math.sqrt(x))], ['nombres premiers', [2, 3, 5, 7, 11, 13, 17, 19, 23, 29], (x) => x > 1 && Array.from({ length: Math.max(0, Math.floor(Math.sqrt(x)) - 1) }, (_, i) => i + 2).every((d) => x % d)], ['cubes parfaits', [1, 8, 27, 64, 125], (x) => Number.isInteger(Math.round(Math.cbrt(x))) && Math.round(Math.cbrt(x)) ** 3 === x], ['multiples de 3', [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36], (x) => x % 3 === 0], ['nombres triangulaires', [1, 3, 6, 10, 15, 21, 28, 36, 45], (x) => { const k = Math.round((Math.sqrt(8 * x + 1) - 1) / 2); return (k * (k + 1)) / 2 === x; }], ['puissances de 2', [2, 4, 8, 16, 32, 64, 128], (x) => x > 0 && (x & (x - 1)) === 0]]; for (let t = 0; t < 400; t++) { const F = r.pick(fams); const four = r.shuffle(F[1]).slice(0, 4); const intr = r.int(2, 80); if (F[2](intr) || four.includes(intr)) continue; const five = r.shuffle([...four, intr]); const counts = fams.map((f) => five.filter((x) => f[2](x)).length); const okF = counts[fams.indexOf(F)] === 4 && counts.every((c, i) => i === fams.indexOf(F) || c <= 3); if (!okF) continue; const names = fams.map((f) => f[0]).join(', '); return { ...mcqWhy(r, String(intr), four.map((x) => [String(x), `${x} fait partie des ${F[0]}, comme les trois autres.`]), `Quatre nombres (${four.sort((a, b) => a - b).join(', ')}) sont des ${F[0]} ; ${intr} n’en est pas un. Aucune autre famille de la liste ne contient quatre de ces cinq nombres : l’intrus est donc ${intr}.`), q: `Quatre de ces nombres appartiennent à la même famille parmi : ${names}.\n${five.join(' ; ')}\nLequel est l’intrus ?` }; } return N('Quel est le plus petit nombre premier ?', 2, '2 est le seul nombre premier pair et le plus petit.'); },
+};
+export default BASE_L.map((g) => { const h = OVR[g.id] ? { ...g, gen: OVR[g.id] } : g; return /^s_/.test(g.id) && !['s_ana', 's_grid', 's_pascal'].includes(g.id) ? wellPosed(h) : h; });
